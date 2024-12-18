@@ -1,0 +1,66 @@
+#include <Wire.h>
+#include <LiquidCrystal_I2C.h>
+#include <Encoder.h>
+
+// LCD I2C configuration
+LiquidCrystal_I2C lcd(0x27, 16, 2); // Adjust 0x27 if needed
+
+// Rotary Encoder Pins
+#define CLK_PIN D6
+#define DT_PIN D7
+#define SW_PIN D5
+
+// Rotary Encoder setup
+Encoder myEnc(CLK_PIN, DT_PIN);
+
+// Clock variables
+int hour = 12, minute = 0;
+int mode = 0; // 0: Adjust hour, 1: Adjust minute
+long lastPosition = -999;
+
+void setup() {
+  // Initialize serial monitor for debugging
+  Serial.begin(115200);
+
+  // Initialize LCD
+  lcd.init();        // Replace lcd.begin() with lcd.init()
+  lcd.backlight();
+  lcd.setCursor(0, 0);
+  lcd.print("Clock Setting:");
+  lcd.setCursor(0, 1);
+  lcd.print("Rotate to adjust");
+
+  // Configure button pin
+  pinMode(SW_PIN, INPUT_PULLUP);
+}
+
+void loop() {
+  // Read rotary encoder position
+  long newPosition = myEnc.read() / 4; // Dividing for smoother increments
+  if (newPosition != lastPosition) {
+    if (mode == 0) {
+      hour = (hour + (newPosition - lastPosition) + 24) % 24; // Wrap around 0-23
+    } else {
+      minute = (minute + (newPosition - lastPosition) + 60) % 60; // Wrap around 0-59
+    }
+    lastPosition = newPosition;
+
+    // Display updated time
+    lcd.setCursor(0, 1);
+    lcd.print("Time: ");
+    lcd.print(hour < 10 ? "0" : "");
+    lcd.print(hour);
+    lcd.print(":");
+    lcd.print(minute < 10 ? "0" : "");
+    lcd.print(minute);
+    lcd.print("   "); // Clear any extra characters
+  }
+
+  // Read encoder button press
+  if (digitalRead(SW_PIN) == LOW) {
+    mode = 1 - mode; // Toggle between hour and minute adjustment
+    lcd.setCursor(0, 0);
+    lcd.print(mode == 0 ? "Adjust Hour   " : "Adjust Minute ");
+    delay(300); // Debounce delay
+  }
+}
